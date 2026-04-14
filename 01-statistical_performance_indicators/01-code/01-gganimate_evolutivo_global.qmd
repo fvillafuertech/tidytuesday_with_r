@@ -87,7 +87,6 @@ world_animation <- data_world |>
   gganimate::transition_time(time = year) +
   ease_aes('linear')
 
-
 # world_animation
 ```
 
