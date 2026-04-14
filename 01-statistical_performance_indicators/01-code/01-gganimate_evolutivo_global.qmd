@@ -1,0 +1,103 @@
+---
+title: "Untitled"
+format: html
+---
+
+## Librerías
+
+```{r}
+library(tidyverse)
+
+theme_set(theme_light() +
+            theme(legend.position = "bottom",
+                  plot.title = element_text(hjust = 0.5),
+                  plot.subtitle = element_text(hjust = 0.5)))
+```
+
+## Cargando Datos
+
+```{r}
+data <- tidytuesdayR::tt_load(2025, week = 47)
+data$spi_indicators
+```
+
+```{r}
+data$spi_indicators |>
+  filter(country == "Peru")
+
+data$spi_indicators |>
+  count(income)
+
+data$spi_indicators |>
+  filter(region == "Latin America & Caribbean") |>
+  group_by(year, country, income) |>
+  summarise_at(c("population", "overall_score", "data_use_score", "data_services_score", "data_products_score", "data_sources_score", "data_infrastructure_score"), sum, na.rm = TRUE) |>
+  ungroup() |>
+  ggplot(aes(year, data_use_score, color = income)) +
+  geom_point(aes(size = population)) + 
+  facet_wrap(~ country, scales = "free")
+
+```
+
+```{r}
+data_geo <- geodata::gadm(country = "PER", level = 1) |>
+  sf::st_as_sf() |>
+  as_tibble()
+```
+
+```{r}
+data_geo |>
+  ggplot() +
+  geom_sf(aes(geometry = geometry))
+```
+
+```{r}
+data_world <- geodata::world() |>
+  sf::st_as_sf() |>
+  as_tibble()
+```
+
+```{r}
+data_world |>
+  left_join(data$spi_indicators |> filter(year == 2023),
+            by = c("GID_0" = "iso3c")) |>
+  ggplot() +
+  geom_sf(aes(geometry = geometry, fill = data_use_score)) +
+  scale_fill_viridis_c()
+```
+
+## Evolutivo Global de Indicadores de Desempeño Estadístico
+
+```{r}
+library(gganimate)
+```
+
+```{r}
+world_animation <- data_world |>
+  left_join(data$spi_indicators,
+            by = c("GID_0" = "iso3c")) |>
+  mutate(year = as.integer(year)) |>
+  ggplot() +
+  geom_sf(aes(geometry = geometry, fill = data_use_score)) + 
+  scale_fill_viridis_c() +
+  labs(title = "Año: {frame_time}",
+       fill = "Puntaje en uso de data") +
+  theme_void() +
+  theme(legend.position = "bottom") + 
+  gganimate::transition_time(time = year) +
+  ease_aes('linear')
+
+# world_animation
+```
+
+```{r}
+animate(world_animation, height = 500, width = 800, res = 150)
+anim_save(
+  here::here("01-statistical_performance_indicators/02-outputs", "world_animation.gif")
+)
+```
+
+
+
+
+
