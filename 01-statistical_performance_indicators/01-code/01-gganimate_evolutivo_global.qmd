@@ -17,18 +17,20 @@ theme_set(theme_light() +
 ## Cargando Datos
 
 ```{r}
-data <- tidytuesdayR::tt_load(2025, week = 47)
-data$spi_indicators
+# data <- tidytuesdayR::tt_load(2025, week = 47)
+data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-11-25/spi_indicators.csv')
+
+data
 ```
 
 ```{r}
-data$spi_indicators |>
+data |>
   filter(country == "Peru")
 
-data$spi_indicators |>
+data |>
   count(income)
 
-data$spi_indicators |>
+data |>
   filter(region == "Latin America & Caribbean") |>
   group_by(year, country, income) |>
   summarise_at(c("population", "overall_score", "data_use_score", "data_services_score", "data_products_score", "data_sources_score", "data_infrastructure_score"), sum, na.rm = TRUE) |>
@@ -40,7 +42,7 @@ data$spi_indicators |>
 ```
 
 ```{r}
-data_geo <- geodata::gadm(country = "PER", level = 1) |>
+data_geo <- geodata::gadm(country = "PER", level = 1, path = "01-statistical_performance_indicators/03-data-map/") |>
   sf::st_as_sf() |>
   as_tibble()
 ```
@@ -52,14 +54,14 @@ data_geo |>
 ```
 
 ```{r}
-data_world <- geodata::world() |>
+data_world <- geodata::world(path = "01-statistical_performance_indicators/03-data-map/") |>
   sf::st_as_sf() |>
   as_tibble()
 ```
 
 ```{r}
 data_world |>
-  left_join(data$spi_indicators |> filter(year == 2023),
+  left_join(data |> filter(year == 2023),
             by = c("GID_0" = "iso3c")) |>
   ggplot() +
   geom_sf(aes(geometry = geometry, fill = data_use_score)) +
@@ -74,7 +76,7 @@ library(gganimate)
 
 ```{r}
 world_animation <- data_world |>
-  left_join(data$spi_indicators,
+  left_join(data,
             by = c("GID_0" = "iso3c")) |>
   mutate(year = as.integer(year)) |>
   ggplot() +
