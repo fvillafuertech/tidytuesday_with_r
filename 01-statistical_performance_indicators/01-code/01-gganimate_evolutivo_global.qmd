@@ -24,48 +24,75 @@ data
 ```
 
 ```{r}
-data |>
-  filter(country == "Peru")
-
-data |>
-  count(income)
-
-data |>
-  filter(region == "Latin America & Caribbean") |>
-  group_by(year, country, income) |>
-  summarise_at(c("population", "overall_score", "data_use_score", "data_services_score", "data_products_score", "data_sources_score", "data_infrastructure_score"), sum, na.rm = TRUE) |>
-  ungroup() |>
-  ggplot(aes(year, data_use_score, color = income)) +
-  geom_point(aes(size = population)) + 
-  facet_wrap(~ country, scales = "free")
-
-```
-
-```{r}
-data_geo <- geodata::gadm(country = "PER", level = 1, path = "01-statistical_performance_indicators/03-data-map/") |>
-  sf::st_as_sf() |>
-  as_tibble()
-```
-
-```{r}
-data_geo |>
-  ggplot() +
-  geom_sf(aes(geometry = geometry))
-```
-
-```{r}
 data_world <- geodata::world(path = "01-statistical_performance_indicators/03-data-map/") |>
   sf::st_as_sf() |>
   as_tibble()
 ```
 
+## Meta - análisis
+
 ```{r}
+df_metadata <- funModeling::df_status(data, print_results = FALSE)
+df_metadata
+```
+
+- Variables de puntajes con missing, posiblemente por no recoger el dato en determinado año.
+
+## Análisis de Datos
+
+```{r}
+cat_var <- df_metadata |>
+  filter(type == "character") |>
+  pull(variable)
+
+num_var <- df_metadata |>
+  filter(type == "numeric",
+         variable != "year") |>
+  pull(variable)
+```
+
+### Univariado
+
+Tomaremos como muestra el periodo del 2023
+
+#### Variables Categóricas
+
+```{r}
+data |>
+  filter(year == 2023) |>
+  count(income, sort = TRUE)
+```
+
+```{r}
+data |>
+  filter(year == 2023) |>
+  count(region)
+```
+
+#### Variables Numéricas
+
+```{r}
+data |>
+  filter(year == 2023) |>
+  ggplot(aes(population)) +
+  geom_histogram()
+
+matriz_histogramas(data |> filter(year == 2023), num_var)
+```
+
+
+```{r}
+data |>
+  filter(year == 2020)
+
 data_world |>
   left_join(data |> filter(year == 2023),
             by = c("GID_0" = "iso3c")) |>
   ggplot() +
-  geom_sf(aes(geometry = geometry, fill = data_use_score)) +
-  scale_fill_viridis_c()
+  geom_sf(aes(geometry = geometry, fill = overall_score)) +
+  scale_fill_viridis_c() +
+  theme_void() +
+  theme(legend.position = "bottom")
 ```
 
 ## Evolutivo Global de Indicadores de Desempeño Estadístico
@@ -80,16 +107,16 @@ world_animation <- data_world |>
             by = c("GID_0" = "iso3c")) |>
   mutate(year = as.integer(year)) |>
   ggplot() +
-  geom_sf(aes(geometry = geometry, fill = data_use_score)) + 
+  geom_sf(aes(geometry = geometry, fill = overall_score)) + 
   scale_fill_viridis_c() +
   labs(title = "Año: {frame_time}",
-       fill = "Puntaje en uso de data") +
+       fill = "Puntaje de desempeño estadístico") +
   theme_void() +
   theme(legend.position = "bottom") + 
   gganimate::transition_time(time = year) +
   ease_aes('linear')
 
-# world_animation
+world_animation
 ```
 
 ```{r}
